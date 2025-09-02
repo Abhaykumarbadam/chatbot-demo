@@ -1,15 +1,14 @@
-// src/api/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDZyTzdfBUMZqHHIOazinyGT0fOje62u6c",
-  authDomain: "chatbottask1-78873.firebaseapp.com",
-  projectId: "chatbottask1-78873",
-  storageBucket: "chatbottask1-78873.firebasestorage.app",
-  messagingSenderId: "414420622756",
-  appId: "1:414420622756:web:2af6d219cd6cffc3ccb531",
-  measurementId: "G-B82FETGFEG"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
