@@ -33,19 +33,39 @@ app.post("/chat/:session_id/stream", async (req, res) => {
       // Gemini REST API call
       const geminiModel = model && model !== ":generateContent" ? model : "gemini-pro";
       const prompt = messages.map(m => m.content).join("\n");
-      const geminiResp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      try {
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          }
+        );
+        const rawText = await geminiResp.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (jsonErr) {
+          console.error("Gemini API response not valid JSON:", rawText);
+          res.write(`data: ${JSON.stringify({ error: "Gemini API response not valid JSON", details: rawText })}\n\n`);
+          res.write("data: [DONE]\n\n");
+          return;
         }
-      );
-      const data = await geminiResp.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      // Always send a delta, even if empty, so frontend can display response
-      res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
-      res.write("data: [DONE]\n\n");
+        if (!data?.candidates || !data?.candidates[0]?.content?.parts?.[0]?.text) {
+          console.error("Gemini API returned no candidates:", data);
+          res.write(`data: ${JSON.stringify({ error: "No response from Gemini API", details: data })}\n\n`);
+          res.write("data: [DONE]\n\n");
+          return;
+        }
+        const text = data.candidates[0].content.parts[0].text || "";
+        res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
+        res.write("data: [DONE]\n\n");
+      } catch (geminiErr) {
+        console.error("Gemini API error:", geminiErr);
+        res.write(`data: ${JSON.stringify({ error: geminiErr.message || "Gemini API error", details: geminiErr })}\n\n`);
+        res.write("data: [DONE]\n\n");
+      }
     } else {
       // OpenAI streaming
       const stream = await openai.chat.completions.create({
@@ -58,7 +78,8 @@ app.post("/chat/:session_id/stream", async (req, res) => {
       res.write("data: [DONE]\n\n");
     }
   } catch (e) {
-    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+    console.error("Chat endpoint error:", e);
+    res.write(`data: ${JSON.stringify({ error: e.message, details: e })}\n\n`);
   } finally {
     res.end();
   }
